@@ -49,6 +49,7 @@ The hook scripts need fewer keys: `verify-user-pass.py` requires `data_dir`, and
 | `ui_users_file` | Path of the console accounts file | `ui-users.json` in the project directory |
 | `session_minutes` | Console session lifetime in minutes | `15` |
 | `session_cookie_secure` | Set to `true` when the console is served over HTTPS, so the browser sends the session cookie over HTTPS only | `false` |
+| `theme` | Colour overrides for the dark and light themes. See "Colour theme". | none |
 
 ## Example
 
@@ -82,6 +83,51 @@ The hook scripts need fewer keys: `verify-user-pass.py` requires `data_dir`, and
     "session_cookie_secure": false
 }
 ```
+
+## Colour theme
+
+The console ships with a blue accent on dark and light neutral surfaces. A
+deployment can replace any colour through the `theme` setting, which holds one
+object per mode. Each object maps a CSS variable to a value.
+
+```json
+"theme": {
+    "dark": {
+        "--accent": "#34c27a",
+        "--accent-soft": "rgba(52, 194, 122, 0.16)",
+        "--text-on-accent": "#05190d",
+        "--highlight": "#f2c230",
+        "--text-on-highlight": "#1a1400"
+    },
+    "light": {
+        "--accent": "#0b6b3a",
+        "--accent-soft": "rgba(11, 107, 58, 0.1)",
+        "--highlight": "#f2b705",
+        "--highlight-text": "#8a6500",
+        "--text-on-highlight": "#1a1400"
+    }
+}
+```
+
+| Variable | Used for |
+|---|---|
+| `--bg-page`, `--bg-surface`, `--bg-surface-alt`, `--bg-hover`, `--bg-code` | Page, panel, raised, hover, and code backgrounds |
+| `--border-color`, `--border-strong` | Dividers and control outlines |
+| `--accent`, `--accent-hover`, `--accent-soft` | Active navigation, primary buttons, selected filters, focus rings |
+| `--text-on-accent` | Text on an accent background |
+| `--highlight` | Second brand colour: the logo mark and the strip along the top edge |
+| `--highlight-text` | The highlight colour where it is used as text, for example the role tag. Set a darker shade for the light theme. |
+| `--text-on-highlight` | Text on a highlight background |
+| `--text-color`, `--text-secondary`, `--text-tertiary` | Primary, muted, and faint text |
+| `--status-success`, `--status-warning`, `--status-danger`, `--status-info` and their `-bg` forms | Status badges, alert counters, row markers |
+| `--data-ip`, `--data-port` | Addresses and ports in tables |
+
+Variables left out keep their built-in values. A name must start with `--` and
+use lower-case letters, digits, and dashes. A value may hold letters, digits,
+`#`, parentheses, commas, dots, percent signs, spaces, and dashes, up to 60
+characters. Entries that fail either check are ignored.
+
+Restart the service after changing the theme.
 
 ## systemd unit
 

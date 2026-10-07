@@ -190,8 +190,39 @@ All notable changes to this project, oldest first within each date. Times are UT
   default light list background and were readable only while hovered.
 - The page declares its colour scheme, so browser-drawn controls follow the theme.
 
+### 11. Operations-console redesign
+
+**Changed**
+- The interface is rebuilt as a security operations console: a sidebar for
+  navigation, a top bar for status, flat bordered panels, system and monospace
+  fonts, and colour reserved for status.
+- "System Logs" is now "Event Log" and "UI Users" is now "Console Users".
+- Tables stack related fields so a row fits common screen widths: user over
+  certificate CN, source address over VPN address, severity over category, event
+  over details, certificate status over expiry.
+- Client actions are labelled buttons: Download, Revoke, Delete.
+- The sign-in page uses the shared stylesheet and states that sign-ins and
+  administrative actions are recorded.
+
+**Added**
+- Top bar: a UTC clock and a VPN Online or Offline indicator, driven by the age
+  of OpenVPN's status file (`vpn_status_age` in `/api/system/stats`).
+- Dashboard counters for the last 24 hours: failed logins, TLS errors, port
+  probes, and device-limit rejections. A counter above zero is outlined.
+- Recent Alerts panel with the eight newest warnings and errors, and a button
+  that opens the Event Log filtered the same way.
+- Error count for the last 24 hours beside the Event Log entry in the sidebar.
+- `theme` setting: per-deployment colour overrides for the dark and light
+  themes, validated before use. The display name and palette of a site live in
+  `config.json`.
+- Navigation drawer for narrow screens.
+- Screenshots in the README, built from invented sample data.
+
+**Removed**
+- Web fonts loaded from a third party. The pages now load assets from the
+  console only.
+- Decorative gradients, glow effects, and translucent surfaces.
+
 ## Deployment status
 
-Items 1 to 5 and item 10 are running on the production server. Items 6 to 8 are
-in the repository and have not been deployed there. `docs/installation.md` describes the
-upgrade steps.
+Every item above is running on the production server.

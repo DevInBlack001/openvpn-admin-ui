@@ -22,12 +22,16 @@ let revealedPasswords = new Set();
 let statsInterval = null;
 let clientsInterval = null;
 let logsInterval = null;
+let alertsInterval = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'light') {
         document.body.classList.add('light-theme');
     }
+    updateThemeLabel();
+    updateUtcClock();
+    setInterval(updateUtcClock, 1000);
 
     switchPage(activePage);
     initFormHandlers();
@@ -61,12 +65,16 @@ function startPolling() {
             fetchLogs();
         }
     }, 2000);
+
+    fetchAlertSummary();
+    alertsInterval = setInterval(fetchAlertSummary, 15000);
 }
 
 function stopPolling() {
     if (statsInterval) clearInterval(statsInterval);
     if (clientsInterval) clearInterval(clientsInterval);
     if (logsInterval) clearInterval(logsInterval);
+    if (alertsInterval) clearInterval(alertsInterval);
 }
 
 function switchPage(pageId) {
@@ -84,7 +92,12 @@ function switchPage(pageId) {
     if (activeView) activeView.classList.remove('hidden');
 
     const activeTab = document.querySelector(`.nav-tab[data-page="${pageId}"]`);
-    if (activeTab) activeTab.classList.add('active');
+    if (activeTab) {
+        activeTab.classList.add('active');
+        const title = document.getElementById('pageTitle');
+        if (title) title.textContent = activeTab.dataset.title || '';
+    }
+    toggleSidebar(false);
 
     if (pageId === 'userManagementPage') {
         fetchUIUsers();
@@ -98,6 +111,29 @@ function toggleTheme() {
     body.classList.toggle('light-theme');
     const isLight = body.classList.contains('light-theme');
     localStorage.setItem('theme', isLight ? 'light' : 'dark');
+    updateThemeLabel();
+}
+
+// The button names the theme a click switches to.
+function updateThemeLabel() {
+    const button = document.getElementById('themeToggleBtn');
+    if (button) {
+        button.textContent = document.body.classList.contains('light-theme') ? 'Dark Mode' : 'Light Mode';
+    }
+}
+
+// Opens or closes the navigation drawer used on narrow screens.
+function toggleSidebar(open) {
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebar) return;
+    const show = open === undefined ? !sidebar.classList.contains('open') : open;
+    sidebar.classList.toggle('open', show);
+    document.getElementById('sidebarBackdrop')?.classList.toggle('visible', show);
+}
+
+function updateUtcClock() {
+    const clock = document.getElementById('utcClock');
+    if (clock) clock.textContent = new Date().toISOString().slice(0, 19).replace('T', ' ');
 }
 
 function fetchSystemStats() {
@@ -125,11 +161,99 @@ function fetchHostStats() {
         .then(data => {
             show('cpuUsageStat', data.cpu_percent);
             show('ramUsageStat', data.memory_percent);
+            showVpnStatus(data.vpn_status_age);
         })
         .catch(() => {
             show('cpuUsageStat', null);
             show('ramUsageStat', null);
+            showVpnStatus(undefined);
         });
+}
+
+// OpenVPN rewrites its status file while it runs, so a fresh file means a live server.
+const VPN_STATUS_STALE_SECONDS = 60;
+
+function showVpnStatus(ageSeconds) {
+    const dot = document.getElementById('vpnStatusDot');
+    const text = document.getElementById('vpnStatusText');
+    if (!dot || !text) return;
+    dot.classList.remove('online', 'offline');
+    if (ageSeconds === undefined || ageSeconds === null) {
+        text.textContent = 'VPN state unknown';
+    } else if (ageSeconds <= VPN_STATUS_STALE_SECONDS) {
+        dot.classList.add('online');
+        text.textContent = 'VPN Online';
+    } else {
+        dot.classList.add('offline');
+        text.textContent = 'VPN Offline';
+    }
+}
+
+// Dashboard alert summary: warnings and errors from the last 24 hours.
+const ALERT_PANEL_ROWS = 8;
+const ALERT_FETCH_ROWS = 1000;
+
+function fetchAlertSummary() {
+    const query = (severity) =>
+        fetch(`/api/logs?severity=${severity}&timeframe=24h&limit=${ALERT_FETCH_ROWS}`).then(res => res.json());
+
+    Promise.all([query('ERROR'), query('WARNING')])
+        .then(([errors, warnings]) => {
+            const count = (rows, test) => rows.filter(test).length;
+            const capped = (n, rows) => (rows.length >= ALERT_FETCH_ROWS ? `${n}+` : String(n));
+
+            setAlertStat('failedLogins', capped(count(errors, r => r.event === 'Login failed'), errors), 'is-danger');
+            setAlertStat('tlsErrors', capped(count(errors, r => r.category === 'tls'), errors), 'is-danger');
+            setAlertStat('probes', capped(count(warnings, r => r.category === 'tls'), warnings), 'is-warning');
+            setAlertStat('limitRejects', capped(count(warnings, r => r.event === 'Device limit exceeded'), warnings), 'is-warning');
+
+            const badge = document.getElementById('navAlertCount');
+            if (badge) {
+                badge.textContent = capped(errors.length, errors);
+                badge.classList.toggle('hidden', errors.length === 0);
+            }
+
+            const recent = errors.concat(warnings)
+                .sort((a, b) => (b.time || '').localeCompare(a.time || ''))
+                .slice(0, ALERT_PANEL_ROWS);
+            renderAlertPanel(recent);
+        })
+        .catch(err => console.error("Error fetching alert summary:", err));
+}
+
+function setAlertStat(name, text, alarmClass) {
+    const value = document.getElementById(`${name}Stat`);
+    const card = document.getElementById(`${name}Card`);
+    if (value) value.textContent = text;
+    if (card) card.classList.toggle(alarmClass, text !== '0');
+}
+
+function renderAlertPanel(rows) {
+    const tbody = document.getElementById('alertTableBody');
+    if (!tbody) return;
+    if (rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="log-empty">No warnings or errors in the last 24 hours.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = rows.map(log => `
+            <tr class="log-row-${escapeHtml(log.severity.toLowerCase())}">
+                <td class="log-col-time">${log.time ? escapeHtml(log.time) : LOG_MUTED}</td>
+                ${logSeverityCell(log, false)}
+                ${logEventCell(log)}
+                ${logIdentityCell(log)}
+                ${logNetworkCell(log)}
+            </tr>
+        `).join('');
+}
+
+// Jumps to the Event Log filtered the same way as the alert panel's errors.
+function openAlertsInEventLog() {
+    const timeframe = document.getElementById('logTimeframeSelector');
+    if (timeframe) timeframe.value = '24h';
+    activeSeverityFilter = 'ERROR';
+    document.querySelectorAll('.severity-pill').forEach(btn => btn.classList.remove('active'));
+    document.querySelector('.severity-pill[data-severity="error"]')?.classList.add('active');
+    switchPage('logsPage');
 }
 
 function fetchCAStatus() {
@@ -176,7 +300,7 @@ function renderClients(clients) {
     if (filtered.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="11" class="text-center py-4 text-secondary">
+                <td colspan="8" class="text-center py-4 text-secondary">
                     No client profiles found.
                 </td>
             </tr>
@@ -221,10 +345,10 @@ function renderClients(clients) {
                 actionButtons = `
                     <div class="actions-cell-wrapper">
                         <button class="btn btn-secondary btn-sm" data-name="${safeName}" onclick="downloadClient(this.dataset.name)" title="Download Configuration">
-                            <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" /></svg>
+                            Download
                         </button>
                         <button class="btn btn-danger btn-sm" data-name="${safeName}" onclick="confirmRevokeClient(this.dataset.name)" title="Revoke Certificate">
-                            <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M12,2C17.52,2 22,6.48 22,12C22,17.52 17.52,22 12,22C6.48,22 2,17.52 2,12C2,6.48 6.48,2 12,2M12,4C7.58,4 4,7.58 4,12C4,16.42 7.58,20 12,20C16.42,20 20,16.42 20,12C20,7.58 16.42,4 12,4M12,6C14.21,6 16,7.79 16,10C16,12.21 14.21,14 12,14C9.79,14 8,12.21 8,10C8,7.79 9.79,6 12,6M12,8C10.9,8 10,8.9 10,10C10,11.1 10.9,12 12,12C13.1,12 14,11.1 14,10C14,8.9 13.1,8 12,8Z" /></svg>
+                            Revoke
                         </button>
                     </div>
                 `;
@@ -232,7 +356,7 @@ function renderClients(clients) {
                 actionButtons = `
                     <div class="actions-cell-wrapper">
                         <button class="btn btn-danger btn-sm" data-name="${safeName}" onclick="confirmDeleteClient(this.dataset.name)" title="Delete Profile">
-                            <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" /></svg>
+                            Delete
                         </button>
                     </div>
                 `;
@@ -242,7 +366,7 @@ function renderClients(clients) {
                 actionButtons = `
                     <div class="actions-cell-wrapper">
                         <button class="btn btn-secondary btn-sm" data-name="${safeName}" onclick="downloadClient(this.dataset.name)" title="Download Configuration">
-                            <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" /></svg>
+                            Download
                         </button>
                     </div>
                 `;
@@ -258,15 +382,13 @@ function renderClients(clients) {
             limitLabel = client.limit;
         }
         
-        const formatIPs = (ipString) => {
-            if (!ipString || ipString === '-') return '-';
-            return ipString.split(', ').map(escapeHtml).join('<br>');
-        };
-
         // One "address:port" line per connected device.
         let realAddress = '-';
         if (client.devices && client.devices.length) {
-            realAddress = client.devices.map(d => escapeHtml(`${d.real_address}:${d.port}`)).join('<br>');
+            realAddress = client.devices.map(d =>
+                `<span class="log-ip">${escapeHtml(d.real_address)}</span><span class="log-port">:${escapeHtml(d.port)}</span>` +
+                `<div class="log-sub" title="Virtual IP">VPN ${escapeHtml(d.virtual_address)}</div>`
+            ).join('');
         }
 
         const expiryDate = (client.expiry || '-').split(' ')[0];
@@ -276,17 +398,20 @@ function renderClients(clients) {
         const passwordBg = isPasswordRevealed ? 'rgba(128,128,128,0.2)' : 'rgba(128,128,128,0.1)';
         
         tr.innerHTML = `
-            <td class="client-name-cell" title="${escapeHtml(client.username)}">${escapeHtml(client.username || '-')}</td>
-            <td class="client-cn-cell" title="${safeName}">${safeName}</td>
-            <td>${statusBadge}</td>
-            <td title="${escapeHtml(client.expiry)}">${escapeHtml(expiryDate)}</td>
+            <td class="client-name-cell" title="${escapeHtml(client.username)}">
+                ${escapeHtml(client.username || '-')}
+                <div class="log-sub" title="Certificate CN">CN ${safeName}</div>
+            </td>
+            <td title="Expires ${escapeHtml(client.expiry)} UTC">
+                ${statusBadge}
+                <div class="log-sub">until ${escapeHtml(expiryDate)}</div>
+            </td>
             <td>${connectionStatus}</td>
             <td style="text-align: center;">${escapeHtml(limitLabel)}</td>
             <td>${client.password === null
                 ? '<span class="text-muted" title="Visible to administrators">Hidden</span>'
                 : `<span class="password-cell" data-name="${safeName}" onclick="togglePasswordReveal(this, this.dataset.name)" data-password="${escapeHtml(client.password || '-')}" style="cursor: pointer; font-family: monospace; background: ${passwordBg}; padding: 4px 8px; border-radius: 4px; font-size: 0.8125rem;">${passwordDisplay}</span>`}</td>
             <td class="ip-cell">${realAddress}</td>
-            <td class="ip-cell">${formatIPs(client.virtual_address)}</td>
             <td>${bandwidth}</td>
             <td class="actions-col">${actionButtons}</td>
         `;
@@ -701,40 +826,59 @@ function renderLogsTable(logs) {
     const filtered = filterLogsBySearch(logs);
 
     if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" class="log-empty">No matching log records found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="log-empty">No matching log records found.</td></tr>`;
         return;
     }
 
-    const muted = '<span class="text-muted">-</span>';
-    const cell = (value) => value ? escapeHtml(value) : muted;
-
-    tbody.innerHTML = filtered.map(log => {
-        let sevBadge = 'badge-info';
-        if (log.severity === 'WARNING') sevBadge = 'badge-warning';
-        if (log.severity === 'ERROR') sevBadge = 'badge-danger';
-
-        const source = log.ip
-            ? `<span class="log-ip">${escapeHtml(log.ip)}</span><span class="log-port">:${escapeHtml(log.port)}</span>`
-            : muted;
-
-        return `
+    tbody.innerHTML = filtered.map(log => `
             <tr class="log-row log-row-${escapeHtml(log.severity.toLowerCase())}" onclick="toggleLogRaw(this)" title="Click to show the original log line">
-                <td class="log-col-time">${cell(log.time)}</td>
-                <td><span class="badge ${sevBadge}">${escapeHtml(log.severity)}</span></td>
-                <td class="log-col-category">${escapeHtml(LOG_CATEGORY_LABELS[log.category] || log.category)}</td>
-                <td class="log-col-event">${escapeHtml(log.event)}</td>
-                <td class="log-col-user" title="${escapeHtml(log.user)}">${cell(log.user)}</td>
-                <td class="log-col-mono">${cell(log.cert_cn)}</td>
-                <td class="log-col-mono">${source}</td>
-                <td class="log-col-mono">${cell(log.virtual_ip)}</td>
-                <td class="log-col-client" title="${escapeHtml([log.client, log.platform].filter(Boolean).join(' / '))}">${cell(log.client || log.platform)}</td>
-                <td class="log-col-details">${escapeHtml(log.details)}</td>
+                <td class="log-col-time">${log.time ? escapeHtml(log.time) : LOG_MUTED}</td>
+                ${logSeverityCell(log, true)}
+                ${logEventCell(log)}
+                ${logIdentityCell(log)}
+                ${logNetworkCell(log)}
+                <td class="log-col-client" title="${escapeHtml([log.client, log.platform].filter(Boolean).join(' / '))}">${log.client || log.platform ? escapeHtml(log.client || log.platform) : LOG_MUTED}</td>
             </tr>
             <tr class="log-raw-row hidden">
-                <td colspan="10"><span class="log-raw-label">Original log line</span>${escapeHtml(log.text)}</td>
+                <td colspan="6"><span class="log-raw-label">Original log line</span>${escapeHtml(log.text)}</td>
             </tr>
-        `;
-    }).join('');
+        `).join('');
+}
+
+// Cells shared by the event log and the dashboard's alert panel. Related
+// fields are stacked so a row shows the whole session without sideways scrolling.
+const LOG_MUTED = '<span class="text-muted">-</span>';
+
+function logSeverityCell(log, withCategory) {
+    let sevBadge = 'badge-info';
+    if (log.severity === 'WARNING') sevBadge = 'badge-warning';
+    if (log.severity === 'ERROR') sevBadge = 'badge-danger';
+    const category = withCategory
+        ? `<div class="log-sub">${escapeHtml(LOG_CATEGORY_LABELS[log.category] || log.category)}</div>`
+        : '';
+    return `<td><span class="badge ${sevBadge}">${escapeHtml(log.severity)}</span>${category}</td>`;
+}
+
+function logEventCell(log) {
+    return `
+        <td class="log-col-event">
+            ${escapeHtml(log.event)}
+            <div class="log-event-details">${escapeHtml(log.details)}</div>
+        </td>`;
+}
+
+function logIdentityCell(log) {
+    const user = log.user ? escapeHtml(log.user) : LOG_MUTED;
+    const cn = log.cert_cn ? `<div class="log-sub" title="Certificate CN">CN ${escapeHtml(log.cert_cn)}</div>` : '';
+    return `<td class="log-col-user" title="${escapeHtml(log.user)}">${user}${cn}</td>`;
+}
+
+function logNetworkCell(log) {
+    const source = log.ip
+        ? `<span class="log-ip">${escapeHtml(log.ip)}</span><span class="log-port">:${escapeHtml(log.port)}</span>`
+        : LOG_MUTED;
+    const virtual = log.virtual_ip ? `<div class="log-sub" title="Virtual IP">VPN ${escapeHtml(log.virtual_ip)}</div>` : '';
+    return `<td class="log-col-mono">${source}${virtual}</td>`;
 }
 
 function toggleLogRaw(row) {

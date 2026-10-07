@@ -117,6 +117,11 @@ Output encoding:
 - Click handlers read their arguments from `data-` attributes, which keeps every
   value out of inline script.
 - Server-rendered templates use Jinja autoescaping.
+- Colour overrides from the `theme` setting are placed in a style block. Each
+  variable name and value is matched against a strict pattern first, and entries
+  that fail are dropped.
+- The pages load no fonts, scripts, or styles from other hosts, so a browser
+  using the console contacts the console only.
 - CSV export quotes every cell and prefixes cells that begin with `=`, `+`, `-`,
   or `@` with an apostrophe, so spreadsheet programs treat them as text.
 - Easy-RSA and other system commands are started with argument lists, without a

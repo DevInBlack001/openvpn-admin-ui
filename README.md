@@ -6,6 +6,17 @@ is connected, and investigate the server log.
 
 Built for the ICT staff of the University of Mines and Technology (UMaT).
 
+![Dashboard with alert counters, recent alerts, and client profiles](docs/images/dashboard.png)
+
+Every name, address, and value in the screenshots is invented sample data.
+
+## How this project was built
+
+The code in this repository was written entirely by AI coding assistants. The
+direction was human: Abdullah Armiyao set the requirements, called the shots, and
+made every decision the assistants worked from, including what to build, how it
+should behave, what to change, and what to ship.
+
 ## Features
 
 - Create a client: certificate, username, connection password, and a limit on
@@ -13,18 +24,26 @@ Built for the ICT staff of the University of Mines and Technology (UMaT).
 - Download a ready-to-import `.ovpn` profile for any valid client.
 - Revoke a certificate. The certificate revocation list is regenerated and loaded
   by OpenVPN.
-- Live dashboard of every client: certificate status, expiry, session state,
-  source address, VPN address, and traffic counters.
-- Log viewer built for incident response. Each event is a table row with time
-  (UTC), severity, category, event name, user, certificate CN, source IP and port,
-  VPN address, client software, and the original log line. Filter by category,
-  severity, and time window. Export to CSV.
+- Operations-console interface: sidebar navigation, a top bar with a UTC clock
+  and the VPN server's state, flat panels, and monospace values.
+- Dashboard with 24-hour counters for failed logins, TLS errors, port probes,
+  and device-limit rejections, plus a panel of the most recent alerts.
+- Live view of every client: certificate status, expiry, session state, source
+  address, VPN address, and traffic counters.
+- Event log built for incident response. Each event is a table row with time
+  (UTC), severity, category, event name and details, user, certificate CN, source
+  IP and port, VPN address, client software, and the original log line. Filter by
+  category, severity, and time window. Export to CSV.
 - Two roles for console accounts: `admin` (full control) and `user` (view and
   download, with VPN passwords withheld).
 - Host CPU and memory tiles read from `/proc`.
 - Audit trail of administrative actions in the service log.
-- One configuration file for every site-specific value.
-- Light and dark themes.
+- One configuration file for every site-specific value, including the display
+  name and the colour palette.
+- Light and dark themes. No fonts, scripts, or styles are loaded from third
+  parties.
+
+![Event log with severity, session identity, and source columns](docs/images/event-log.png)
 
 ## How it fits together
 

@@ -46,7 +46,7 @@ manage VPN users and download profiles.
 | `vpncrypto.py` | Imported by the app and the auth hook | Encrypts and decrypts stored VPN passwords with an integrity check. |
 | `verify-user-pass.py` | OpenVPN, at each connection | Confirms the username and password a client sent. |
 | `limit-connections.py` | OpenVPN, at each connection | Rejects a connection when the client already has its maximum number of devices connected. |
-| Browser front end (`index.html`, `app.js`, `style.css`) | The administrator's browser | One page with three views: Dashboard, UI Users, System Logs. |
+| Browser front end (`index.html`, `app.js`, `style.css`) | The administrator's browser | One page with three views: Dashboard, Event Log, Console Users. |
 
 ### Data
 
@@ -102,6 +102,19 @@ The log view turns OpenVPN's text log into structured events.
 
 The four categories are Connections, Authentication, TLS Security, and General.
 
+### Interface
+
+The console is laid out as a security operations tool. A sidebar holds the
+navigation and an error count for the last 24 hours. The top bar shows the
+current UTC time, whether the VPN server is running, the signed-in account, and
+the theme switch. The dashboard opens with counters for failed logins, TLS
+errors, port probes, and device-limit rejections, followed by the most recent
+alerts and the client list. Tables stack related fields, such as the user over
+the certificate CN, so a row shows a whole session at common screen widths.
+
+Colours come from CSS variables. A deployment sets its own palette and display
+name in `config.json`.
+
 ## Technology
 
 | Layer | Choice |
@@ -109,7 +122,7 @@ The four categories are Connections, Authentication, TLS Security, and General.
 | Backend | Python 3, Flask 3.0, Werkzeug 3.0 |
 | Application server | gunicorn 21.2, three sync workers |
 | PKI | Easy-RSA 3 |
-| Front end | Server-rendered HTML with plain JavaScript and CSS |
+| Front end | Server-rendered HTML with plain JavaScript and CSS, system fonts, no third-party assets |
 | Process management | systemd |
 | Storage | JSON files |
 
@@ -122,6 +135,12 @@ The four categories are Connections, Authentication, TLS Security, and General.
 - The profile builder script is supplied by each deployment.
 - Known security limitations are listed in [security.md](security.md).
 
+## How it was built
+
+The code was written entirely by AI coding assistants. Abdullah Armiyao directed
+the work: he set the requirements, called the shots, and made every decision the
+assistants worked from.
+
 ## Author and license
 
-Written by Abdullah Armiyao. Released under the MIT License.
+Directed and owned by Abdullah Armiyao. Released under the MIT License.

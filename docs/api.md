@@ -58,6 +58,7 @@ Access: signed in.
 |---|---|---|
 | `cpu_percent` | number or null | Host CPU use since the worker's previous sample, from `/proc/stat` |
 | `memory_percent` | number or null | Memory in use (total minus available), from `/proc/meminfo` |
+| `vpn_status_age` | number or null | Seconds since OpenVPN last wrote its status file. The console shows the VPN as online while this is 60 or less. |
 
 A value is `null` when it cannot be read.
 

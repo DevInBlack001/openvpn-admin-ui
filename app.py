@@ -306,6 +306,11 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+@app.context_processor
+def inject_branding():
+    """Display name and colour overrides, available to every template."""
+    return {"brand_name": settings.brand_name, "theme_css": settings.theme_css}
+
 def csrf_token():
     """The per-session token the page must echo on every state-changing request."""
     if 'csrf_token' not in session:
@@ -666,7 +671,13 @@ def read_memory_percent():
 @app.route('/api/system/stats', methods=['GET'])
 @login_required
 def api_system_stats():
-    stats = {"cpu_percent": None, "memory_percent": None}
+    stats = {"cpu_percent": None, "memory_percent": None, "vpn_status_age": None}
+    try:
+        # OpenVPN rewrites its status file while it runs. The page reads the
+        # file's age as a liveness signal for the VPN server.
+        stats["vpn_status_age"] = max(0, round(time.time() - os.stat(OPENVPN_STATUS).st_mtime))
+    except OSError:
+        pass
     try:
         stats["cpu_percent"] = read_cpu_percent()
     except Exception as e:

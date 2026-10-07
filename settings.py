@@ -6,6 +6,7 @@ to this file. See config.example.json and docs/configuration.md.
 """
 import json
 import os
+import re
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_ENV_VAR = "OPENVPN_UI_CONFIG"
@@ -25,6 +26,10 @@ APP_REQUIRED = (
 )
 
 CA_FIELDS = ("country", "province", "city", "org", "ou", "email")
+
+# A theme override may set CSS custom properties to colours and simple values.
+THEME_NAME_RE = re.compile(r"^--[a-z0-9-]{1,40}$")
+THEME_VALUE_RE = re.compile(r"^[#a-zA-Z0-9(),.% -]{1,60}$")
 
 
 class SettingsError(Exception):
@@ -94,6 +99,33 @@ class Settings:
     @property
     def brand_name(self):
         return self.get("brand_name", "OpenVPN")
+
+    @property
+    def theme_css(self):
+        """CSS that overrides the console's colour variables, built from the `theme` setting.
+
+        `theme` holds a `dark` and a `light` object mapping CSS variable names
+        to values. Names and values are checked against strict patterns and
+        anything else is dropped, so the result is safe to place in a <style>
+        block. Returns an empty string when no valid override is configured.
+        """
+        theme = self.get("theme", {})
+        if not isinstance(theme, dict):
+            return ""
+        blocks = []
+        for mode, selector in (("dark", ":root"), ("light", "body.light-theme")):
+            variables = theme.get(mode)
+            if not isinstance(variables, dict):
+                continue
+            rules = [
+                f"{name}: {value};"
+                for name, value in variables.items()
+                if isinstance(name, str) and isinstance(value, str)
+                and THEME_NAME_RE.match(name) and THEME_VALUE_RE.match(value)
+            ]
+            if rules:
+                blocks.append(f"{selector} {{ {' '.join(rules)} }}")
+        return "\n".join(blocks)
 
 
 def load_settings(required=APP_REQUIRED):

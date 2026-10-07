@@ -24,5 +24,10 @@
     },
 
     "session_minutes": 15,
-    "session_cookie_secure": false
+    "session_cookie_secure": false,
+
+    "theme": {
+        "dark": {},
+        "light": {}
+    }
 }

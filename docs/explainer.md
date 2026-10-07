@@ -31,6 +31,8 @@ Loads the configuration file for the web app and both hooks.
 | `CONFIG_PATH` | Path of the configuration file in use: the variable's value when set, otherwise `config.json` in `BASE_DIR` |
 | `APP_REQUIRED` | Tuple of keys the web app needs: `pki_dir`, `data_dir`, `clients_dir`, `crl_file`, `openvpn_status`, `openvpn_log`, `openvpn_service`, `make_client_script`, `file_owner` |
 | `CA_FIELDS` | Names of the six certificate subject fields: `country`, `province`, `city`, `org`, `ou`, `email` |
+| `THEME_NAME_RE` | Pattern a theme variable name must match: `--` followed by lower-case letters, digits, and dashes |
+| `THEME_VALUE_RE` | Pattern a theme value must match: letters, digits, `#`, parentheses, commas, dots, percent signs, spaces, and dashes, up to 60 characters |
 
 ### SettingsError
 
@@ -55,6 +57,7 @@ Wraps the parsed configuration.
 | `session_minutes` | Integer of at least 1, default 15 |
 | `session_cookie_secure` | Boolean, default false |
 | `brand_name` | String, default `OpenVPN` |
+| `theme_css` | CSS text built from the `theme` setting: one rule for `:root` (dark) and one for `body.light-theme`, holding the variables that pass both patterns. Empty when nothing valid is configured. |
 | `_data_file(name)` | Helper that joins `data_dir` and a file name |
 
 ### load_settings(required=APP_REQUIRED)
@@ -185,6 +188,7 @@ Action names: `login`, `login_failed`, `login_blocked`, `client_create`,
 | `current_account()` | The signed-in user's record as stored now, or `None` |
 | `login_required(f)` | Decorator. Redirects to `/login` without a session. Re-reads the account on each request: a deleted account loses its session, and the session's role is refreshed from the file. |
 | `admin_required(f)` | Decorator. Returns `403` unless the session role is `admin`. |
+| `inject_branding()` | Template context processor. Gives every template `brand_name` and `theme_css`. |
 | `csrf_token()` | Returns the session's CSRF token, creating a random one on first use |
 | `check_csrf()` | Runs before every request. For a `POST` under `/api/`, compares the `X-CSRF-Token` header with the session token in constant time and returns `403` on mismatch. |
 | `LOGIN_MAX_FAILURES`, `LOGIN_WINDOW_SECONDS` | Throttle settings: 5 failures in 900 seconds |
@@ -238,7 +242,7 @@ Index status letters: `V` valid, `R` revoked, `E` expired.
 | Function | Route | Notes |
 |---|---|---|
 | `api_clients()` | `GET /api/clients` | `parse_index_txt` then `parse_status_log`. Sets `password` to `null` for non-admins. |
-| `api_system_stats()` | `GET /api/system/stats` | CPU and memory percentages, `null` for a value that cannot be read |
+| `api_system_stats()` | `GET /api/system/stats` | CPU and memory percentages and the age of the OpenVPN status file in seconds, `null` for a value that cannot be read |
 | `api_ca_defaults()` | `GET /api/ca/defaults` | `parse_ca_vars()` |
 | `api_create_client()` | `POST /api/clients/create` | Validates every field, runs `easyrsa gen-req` and `sign-req`, saves mapping, password, and limit, builds the profile |
 | `api_download_client(name)` | `GET /api/clients/download/<name>` | Validates the name, rebuilds a missing profile, returns the file |
@@ -363,25 +367,37 @@ The console's behaviour. Plain JavaScript, loaded at the end of `index.html`.
 | `activePage` | Visible view: `dashboardPage`, `userManagementPage`, `logsPage` |
 | `uiUsersData` | Last console account list |
 | `revealedPasswords` | Set of certificate CNs whose password is currently shown |
-| `statsInterval`, `clientsInterval`, `logsInterval` | Timer handles for the three refresh loops |
+| `statsInterval`, `clientsInterval`, `logsInterval`, `alertsInterval` | Timer handles for the four refresh loops |
 | `LOG_CATEGORY_LABELS` | Display names for the log categories |
+| `LOG_MUTED` | The dimmed dash shown for an empty table value |
+| `VPN_STATUS_STALE_SECONDS` | Age of the status file beyond which the VPN is shown as offline, 60 |
+| `ALERT_PANEL_ROWS` | Rows in the dashboard's Recent Alerts panel, 8 |
+| `ALERT_FETCH_ROWS` | Rows requested per severity for the 24-hour counters, 1000 |
 
 ### Start-up and navigation
 
 | Function | Purpose |
 |---|---|
-| `DOMContentLoaded` handler | Applies the saved theme, shows the dashboard, wires the forms, loads defaults and clients, starts polling, and attaches the log table's scroll listener |
-| `startPolling()` | Starts three 2-second timers: tiles, clients, and logs (logs only while the log view is open) |
+| `DOMContentLoaded` handler | Applies the saved theme, starts the UTC clock, shows the dashboard, wires the forms, loads defaults and clients, starts polling, and attaches the log table's scroll listener |
+| `startPolling()` | Starts three 2-second timers (tiles, clients, and logs while the log view is open) and a 15-second timer for the alert summary |
 | `stopPolling()` | Clears the timers |
-| `switchPage(pageId)` | Shows one view, marks its tab, and loads that view's data |
+| `switchPage(pageId)` | Shows one view, marks its sidebar entry, sets the page title from the entry's `data-title`, closes the drawer, and loads that view's data |
 | `toggleTheme()` | Switches light and dark and stores the choice in `localStorage` under `theme` |
+| `updateThemeLabel()` | Sets the theme button's text to the theme a click switches to |
+| `toggleSidebar(open)` | Opens or closes the navigation drawer used on narrow screens. Toggles when called without an argument. |
+| `updateUtcClock()` | Writes the current UTC date and time into the top bar. Runs every second. |
 
 ### Dashboard
 
 | Function | Purpose |
 |---|---|
 | `fetchSystemStats()` | Computes Active Tunnels (connected devices) and Total Profiles from `clientsData` |
-| `fetchHostStats()` | Loads `/api/system/stats` and fills the CPU and memory tiles, showing `--%` for a missing value |
+| `fetchHostStats()` | Loads `/api/system/stats`, fills the CPU and memory tiles (showing `--%` for a missing value), and passes the status file's age to `showVpnStatus` |
+| `showVpnStatus(ageSeconds)` | Sets the top bar's VPN pill to Online, Offline, or unknown |
+| `fetchAlertSummary()` | Loads the last 24 hours of errors and of warnings, fills the four alert counters and the sidebar's error count, and passes the newest rows to `renderAlertPanel` |
+| `setAlertStat(name, text, alarmClass)` | Writes one counter and outlines its card when the value is above zero |
+| `renderAlertPanel(rows)` | Builds the Recent Alerts table |
+| `openAlertsInEventLog()` | Opens the Event Log with the window set to 24 hours and the severity set to errors |
 | `fetchCAStatus()` | Loads the default certificate fields |
 | `fetchClients()` | Loads the client list, redirects to `/login` when the session has ended, and re-renders |
 | `renderClients(clients)` | Filters by the search box and builds the table rows. Every value passes through `escapeHtml`. Buttons carry the client name in a `data-name` attribute. |
@@ -392,11 +408,10 @@ The console's behaviour. Plain JavaScript, loaded at the end of `index.html`.
 | `confirmRevokeClient(name)`, `confirmDeleteClient(name)` | Open the confirmation dialog and send the request on confirm |
 | `formatBytes(bytes)` | Formats a byte count with a binary unit |
 
-Local helpers inside `renderClients`: `safeName` (escaped CN), `formatIPs`
-(one address per line), `realAddress` (`address:port` per device), `expiryDate`
-(date part of the expiry), `statusBadge`, `connectionStatus`, `bandwidth`,
-`actionButtons`, `limitLabel`, `isPasswordRevealed`, `passwordDisplay`,
-`passwordBg`.
+Local helpers inside `renderClients`: `safeName` (escaped CN), `realAddress`
+(`address:port` per device with its VPN address beneath), `expiryDate` (date part
+of the expiry), `statusBadge`, `connectionStatus`, `bandwidth`, `actionButtons`,
+`limitLabel`, `isPasswordRevealed`, `passwordDisplay`, `passwordBg`.
 
 ### Dialogs and forms
 
@@ -426,6 +441,10 @@ Local helpers inside `renderClients`: `safeName` (escaped CN), `formatIPs`
 | `escapeHtml(value)` | Replaces `&`, `<`, `>`, `"`, and `'` with HTML entities. `null` and `undefined` become an empty string. |
 | `filterLogsBySearch(logs)` | Keeps rows whose raw line, event, user, certificate CN, virtual IP, client, or platform contains the search text |
 | `renderLogsTable(logs)` | Builds two table rows per event: the visible row, and a hidden row holding the original line |
+| `logSeverityCell(log, withCategory)` | Severity badge, with the category beneath it when asked |
+| `logEventCell(log)` | Event name with the details beneath it |
+| `logIdentityCell(log)` | Username with the certificate CN beneath it |
+| `logNetworkCell(log)` | Source address and port with the VPN address beneath it |
 | `toggleLogRaw(row)` | Shows or hides the original line. Does nothing while text is selected, so copying works. |
 | `filterLogsConsole()` | Re-renders after the search box changes |
 | `switchLogTab(tabId)`, `switchSeverityFilter(sevId)` | Change a filter and reload |
@@ -443,13 +462,18 @@ search box.
 ### index.html
 
 The console page. Jinja variables: `username`, `role`, `csrf_token`,
-`brand_name`, `email_domains`.
+`brand_name`, `email_domains`, `theme_css`.
 
 | Element id | Role |
 |---|---|
+| `sidebar`, `sidebarBackdrop` | Navigation and the backdrop behind its drawer form |
+| `navAlertCount` | Error count beside the Event Log entry |
+| `pageTitle`, `utcClock`, `vpnStatusDot`, `vpnStatusText`, `themeToggleBtn` | Top bar parts |
 | `currentUserDisplay` | Holds `data-role` and `data-username` for the script |
 | `dashboardPage`, `userManagementPage`, `logsPage` | The three views. The accounts view is rendered for admins only. |
-| `activeConnsStat`, `totalClientsStat`, `cpuUsageStat`, `ramUsageStat` | Summary tile values |
+| `activeConnsStat`, `totalClientsStat`, `cpuUsageStat`, `ramUsageStat` | Summary counter values |
+| `failedLoginsStat`, `tlsErrorsStat`, `probesStat`, `limitRejectsStat` and the matching `...Card` ids | 24-hour alert counters and their cards |
+| `alertTableBody` | Recent Alerts table body |
 | `clientSearchInput`, `clientTableBody` | Client search box and table body |
 | `uiUserTableBody` | Account table body |
 | `logLimitSelector`, `logTimeframeSelector`, `logSearchInput`, `logVerboseToggle` | Log controls |
@@ -463,9 +487,9 @@ The console page. Jinja variables: `username`, `role`, `csrf_token`,
 
 ### login.html
 
-The sign-in page, self-contained with its own styles and theme toggle. Jinja
-variables: `brand_name`, `error`. The form posts `username` and `password` to
-`/login`.
+The sign-in page. It uses the shared stylesheet and carries a small script for
+the theme switch. Jinja variables: `brand_name`, `theme_css`, `error`. The form
+posts `username` and `password` to `/login`.
 
 ---
 
@@ -477,31 +501,38 @@ Defined on `:root` for the dark theme and overridden under `body.light-theme`.
 
 | Variable | Use |
 |---|---|
-| `--bg-color` | Page background |
-| `--card-bg` | Translucent card background |
-| `--border-color` | Borders and dividers |
-| `--text-color`, `--text-secondary` | Primary and muted text |
-| `--primary-color`, `--primary-hover` | Primary accent |
-| `--accent-gold`, `--accent-gold-hover` | Secondary accent |
-| `--error-color`, `--success-color`, `--warning-color` | Status colours |
-| `--sans-font`, `--mono-font` | Font stacks |
-| `--shadow` | Card shadow |
+| `--bg-page`, `--bg-surface`, `--bg-surface-alt`, `--bg-hover`, `--bg-code` | Page, panel, raised, hover, and code backgrounds |
+| `--bg-sidebar` | Optional sidebar background. Falls back to `--bg-surface`. |
+| `--border-color`, `--border-strong` | Dividers and control outlines |
+| `--accent`, `--accent-hover`, `--accent-soft`, `--text-on-accent` | Main brand colour and the text placed on it |
+| `--highlight`, `--highlight-text`, `--text-on-highlight` | Second brand colour for the logo mark, the top strip, and the role tag. Follows the accent unless a theme sets it. |
+| `--text-color`, `--text-secondary`, `--text-tertiary` | Primary, muted, and faint text |
+| `--status-success`, `--status-warning`, `--status-danger`, `--status-info`, each with a `-bg` form | Status colours and their tinted backgrounds |
+| `--data-ip`, `--data-port` | Addresses and ports in tables |
+| `--shadow-sm`, `--shadow-md` | Panel and dialog shadows |
+| `--radius-sm`, `--radius`, `--transition-speed` | Corner radii and transition time |
+| `--font-sans`, `--font-mono` | System font stacks |
+
+A deployment overrides any of these through the `theme` setting. See
+[configuration.md](configuration.md#colour-theme).
 
 ### Main class groups
 
 | Classes | Use |
 |---|---|
-| `.glass`, `.circle` | Translucent surfaces and background blobs |
-| `.app-header`, `.nav-tab`, `.user-badge` | Header and navigation |
-| `.metrics-grid`, `.metric-card` | Summary tiles |
-| `.main-card`, `.card-header`, `.table-container` | Cards and the borderless, page-flowing table wrapper |
-| `.client-table`, `.client-name-cell`, `.client-cn-cell`, `.ip-cell`, `.actions-col` | Client and account tables |
+| `.sidebar`, `.logo-area`, `.logo-icon`, `.logo-text`, `.nav-menu`, `.nav-section`, `.nav-tab`, `.nav-dot`, `.nav-count`, `.sidebar-footer` | Sidebar navigation |
+| `.main-panel`, `.top-bar`, `.top-bar-title`, `.system-status`, `.status-pill`, `.role-tag`, `.theme-toggle`, `.nav-toggle`, `.sidebar-backdrop`, `.content-area` | Top bar and page frame |
+| `.stats-grid`, `.stat-card`, `.stat-label`, `.stat-value`, `.stat-meta`, `.is-warning`, `.is-danger` | Dashboard counters and their alarm outlines |
+| `.main-card`, `.card-header`, `.header-left`, `.panel-tag`, `.table-container` | Panels and the scrolling table wrapper |
+| `.client-table`, `.client-name-cell`, `.ip-cell`, `.actions-col`, `.actions-cell-wrapper`, `.password-cell` | Client and account tables |
 | `.badge`, `.badge-success`, `.badge-danger`, `.badge-warning`, `.badge-info`, `.status-dot` | Status markers |
-| `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-danger`, `.btn-sm` | Buttons |
-| `.log-tabs`, `.log-tab`, `.severity-pill`, `.log-verbose-toggle` | Log controls |
-| `.log-table-wrapper`, `.log-table-scroll`, `.log-table`, `.log-row`, `.log-row-warning`, `.log-row-error`, `.log-raw-row`, `.log-col-*`, `.log-paused-pill` | Log table |
-| `.modal-overlay`, `.modal`, `.input-group`, `.input-grid-2`, `.field-hint` | Dialogs and forms |
-| `.alert`, `.spinner`, `.toast`, `.hidden`, `.text-muted` | Feedback and utilities |
+| `.btn`, `.btn-primary`, `.btn-danger`, `.btn-sm` | Buttons |
+| `.form-input`, `.form-select`, `.field-label`, `.input-group`, `.input-grid-2`, `.field-hint` | Form controls |
+| `.log-controls-row`, `.log-tabs`, `.log-tab`, `.severity-pill`, `.log-filter-group`, `.log-verbose-toggle` | Event log controls |
+| `.log-table-wrapper`, `.log-table-scroll`, `.log-table`, `.log-row`, `.log-row-warning`, `.log-row-error`, `.log-raw-row`, `.log-col-*`, `.log-sub`, `.log-event-details`, `.log-paused-pill` | Event log and alert tables |
+| `.modal-overlay`, `.modal`, `.modal-header`, `.modal-body`, `.modal-footer`, `.modal-section-title` | Dialogs |
+| `.login-page`, `.login-panel`, `.login-brand`, `.login-submit`, `.login-notice`, `.login-theme-toggle` | Sign-in page |
+| `.alert`, `.spinner`, `.toast`, `.hidden`, `.text-muted`, `.mono` | Feedback and utilities |
 
 ---
 
