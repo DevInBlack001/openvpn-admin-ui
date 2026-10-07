@@ -182,8 +182,16 @@ All notable changes to this project, oldest first within each date. Times are UT
 - `docs/project.md`, `docs/installation.md`, `docs/configuration.md`,
   `docs/usage.md`, `docs/api.md`, `docs/explainer.md`, `docs/security.md`.
 
+### 10. Dropdown lists readable in both themes
+
+**Fixed**
+- Options in an open dropdown list take a solid background and text colour from
+  the active theme. They previously inherited light text over the browser's
+  default light list background and were readable only while hovered.
+- The page declares its colour scheme, so browser-drawn controls follow the theme.
+
 ## Deployment status
 
-Items 1 to 5 are running on the production server. Items 6 to 8 are in the
-repository and have not been deployed there. `docs/installation.md` describes the
+Items 1 to 5 and item 10 are running on the production server. Items 6 to 8 are
+in the repository and have not been deployed there. `docs/installation.md` describes the
 upgrade steps.

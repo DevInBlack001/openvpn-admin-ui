@@ -30,6 +30,30 @@ body.light-theme {
     --shadow: 0 8px 32px 0 rgba(148, 163, 184, 0.15);
 }
 
+/* --- Dropdown lists ---
+   The open list of a <select> is drawn by the browser, which ignores the
+   translucent background of the control. Give the options a solid background
+   and text colour from the active theme so every entry is readable. */
+body {
+    --option-bg: #141a2e;
+    color-scheme: dark;
+}
+
+body.light-theme {
+    --option-bg: #ffffff;
+    color-scheme: light;
+}
+
+select {
+    color: var(--text-color);
+}
+
+select option,
+select optgroup {
+    background-color: var(--option-bg);
+    color: var(--text-color);
+}
+
 /* --- Layout Reset & Base Style --- */
 * {
     box-sizing: border-box;
