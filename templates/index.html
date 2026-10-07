@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ brand_name }} Admin Dashboard</title>
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Roboto+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="circle circle-1"></div>
+    <div class="circle circle-2"></div>
+
+    <header class="app-header glass">
+        <div class="header-brand">
+            <svg viewBox="0 0 24 24" width="28" height="28" class="brand-icon">
+                <path fill="currentColor" d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/>
+            </svg>
+            <div class="brand-text">
+                <h1>{{ brand_name }}</h1>
+                <span>Admin Console</span>
+            </div>
+        </div>
+        
+        <nav class="nav-links">
+            <button class="nav-tab active" data-page="dashboardPage" onclick="switchPage('dashboardPage')">
+                <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M10,20H14V14H10V20M21,12L12,3L3,12H6V20H12V14H12V20H18V12H21Z"/></svg>
+                Dashboard
+            </button>
+            {% if role == 'admin' %}
+            <button class="nav-tab" data-page="userManagementPage" onclick="switchPage('userManagementPage')">
+                <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z"/></svg>
+                UI Users
+            </button>
+            {% endif %}
+            <button class="nav-tab" data-page="logsPage" onclick="switchPage('logsPage')">
+                <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M13,3H19V7H13V3M13,9H19V13H13V9M13,15H19V19H13V15M11,3H5V7H11V3M11,9H5V13H11V9M11,15H5V19H11V15M17,21H7V22H17V21Z"/></svg>
+                System Logs
+            </button>
+        </nav>
+
+        <div class="header-right">
+            <div class="theme-toggle-header" onclick="toggleTheme()" title="Toggle Light/Dark Theme">
+                <svg id="sunIcon" class="hidden" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+                <svg id="moonIcon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+            </div>
+            
+            <div class="user-badge" id="currentUserDisplay" data-role="{{ role }}" data-username="{{ username }}">
+                <span class="user-avatar">
+                    {{ username[0].upper() if username else 'U' }}
+                </span>
+                <div class="user-meta">
+                    <span class="username-text">{{ username }}</span>
+                    <span class="role-text">{{ role.upper() }}</span>
+                </div>
+            </div>
+            <a href="/logout" class="btn btn-secondary btn-logout" title="Sign Out">
+                <svg viewBox="0 0 24 24" width="16" height="16">
+                    <path fill="currentColor" d="M14.08,15.59L16.67,13H7V11H16.67L14.08,8.41L15.5,7L20.5,12L15.5,17L14.08,15.59M19,3A2,2 0 0,1 21,5V9.67L19,7.67V5H5V19H19V16.33L21,14.33V19A2,2 0 0,1 19,21H5C3.89,21 3,20.1 3,19V5C3,3.89 3.89,3 5,3H19Z" />
+                </svg>
+            </a>
+        </div>
+    </header>
+
+    <div id="toastNotification" class="toast hidden"></div>
+
+    <main class="app-main">
+        <section id="dashboardPage" class="page-view">
+            <div class="metrics-grid">
+                <div class="metric-card glass">
+                    <div class="metric-info">
+                        <h3>Active Tunnels</h3>
+                        <span class="metric-value" id="activeConnsStat">0</span>
+                        <span class="metric-hint">Connected devices</span>
+                    </div>
+                    <div class="metric-icon accent-blue">
+                        <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M4.1,21L6,17.22M19.9,21L18,17.22M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4Z"/></svg>
+                    </div>
+                </div>
+                
+                <div class="metric-card glass">
+                    <div class="metric-info">
+                        <h3>Total Profiles</h3>
+                        <span class="metric-value" id="totalClientsStat">0</span>
+                        <span class="metric-hint">Client certificates</span>
+                    </div>
+                    <div class="metric-icon accent-green">
+                        <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                    </div>
+                </div>
+
+                <div class="metric-card glass">
+                    <div class="metric-info">
+                        <h3>CPU Usage</h3>
+                        <span class="metric-value" id="cpuUsageStat">--%</span>
+                        <span class="metric-hint">System CPU load</span>
+                    </div>
+                    <div class="metric-icon accent-purple">
+                        <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M17,17H7V7H17M21,11V9H19V7A2,2 0 0,0 17,5H15V3H13V5H11V3H9V5H7A2,2 0 0,0 5,7V9H3V11H5V13H3V15H5V17A2,2 0 0,0 7,19H9V21H11V19H13V21H15V19H17A2,2 0 0,0 19,17V15H21V13H19V11H21Z"/></svg>
+                    </div>
+                </div>
+
+                <div class="metric-card glass">
+                    <div class="metric-info">
+                        <h3>Memory Usage</h3>
+                        <span class="metric-value" id="ramUsageStat">--%</span>
+                        <span class="metric-hint">RAM in use</span>
+                    </div>
+                    <div class="metric-icon accent-gold">
+                        <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M2,17V19H22V17H2M2,5V7H22V5H2M2,9V15H22V9H2M4,11H7V13H4V11M9,11H12V13H9V11M14,11H20V13H14V11Z"/></svg>
+                    </div>
+                </div>
+            </div>
+
+            <section class="main-card glass full-width-card">
+                <div class="card-header">
+                    <div class="header-left">
+                        <h2>Client Configuration Profiles</h2>
+                        <div class="search-box-wrapper">
+                            <input type="text" id="clientSearchInput" oninput="filterClientsTable()" placeholder="Search by email, Common Name, IP...">
+                        </div>
+                    </div>
+                    {% if role == 'admin' %}
+                    <button class="btn btn-primary" onclick="openModal('createModal')">
+                        <svg viewBox="0 0 24 24" width="18" height="18">
+                            <path fill="currentColor" d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
+                        </svg>
+                        Add Client
+                    </button>
+                    {% endif %}
+                </div>
+
+                <div class="table-container">
+                    <table class="client-table">
+                        <thead>
+                            <tr>
+                                <th>Username (Email)</th>
+                                <th>Common Name</th>
+                                <th>PKI</th>
+                                <th>Expires (UTC)</th>
+                                <th>Session</th>
+                                <th style="text-align: center;" title="Maximum simultaneous connections">Max</th>
+                                <th>Password</th>
+                                <th>Real Address</th>
+                                <th>Virtual IP</th>
+                                <th>Bandwidth</th>
+                                <th class="actions-col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clientTableBody">
+                            <tr>
+                                <td colspan="11" class="text-center py-4">
+                                    <span class="spinner block-spinner"></span>
+                                    Loading clients...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </section>
+
+        {% if role == 'admin' %}
+        <section id="userManagementPage" class="page-view hidden">
+            <section class="main-card glass full-width-card">
+                <div class="card-header">
+                    <div class="header-left">
+                        <h2>UI User Management</h2>
+                    </div>
+                    <button class="btn btn-primary" onclick="openModal('createUserModal')">
+                        <svg viewBox="0 0 24 24" width="18" height="18">
+                            <path fill="currentColor" d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
+                        </svg>
+                        Add UI User
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table class="client-table">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Role</th>
+                                <th class="actions-col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="uiUserTableBody">
+                            <tr>
+                                <td colspan="3" class="text-center py-4">
+                                    <span class="spinner block-spinner"></span>
+                                    Loading users...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </section>
+        {% endif %}
+
+        <section id="logsPage" class="page-view hidden">
+            <section class="main-card glass full-width-card">
+                <div class="card-header">
+                    <div class="header-left">
+                        <h2>OpenVPN Service Logs</h2>
+                        <div class="log-limit-wrapper" style="margin-left: 1rem;">
+                            <label for="logLimitSelector" style="font-size: 0.8125rem; color: var(--text-secondary); margin-right: 6px;">Show:</label>
+                            <select id="logLimitSelector" onchange="fetchLogs(true)" style="padding: 6px 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-color);">
+                                <option value="100" selected>100 Lines</option>
+                                <option value="500">500 Lines</option>
+                                <option value="1000">1000 Lines</option>
+                            </select>
+                        </div>
+                        <div class="log-timeframe-wrapper" style="margin-left: 1rem;">
+                            <label for="logTimeframeSelector" style="font-size: 0.8125rem; color: var(--text-secondary); margin-right: 6px;">Timeframe:</label>
+                            <select id="logTimeframeSelector" onchange="fetchLogs(true)" style="padding: 6px 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-color);">
+                                <option value="all" selected>All Time</option>
+                                <option value="30m">Within 30 Mins</option>
+                                <option value="1h">Within 1 Hour</option>
+                                <option value="24h">Within 24 Hours</option>
+                                <option value="3d">Within 3 Days</option>
+                                <option value="1w">Within 1 Week</option>
+                                <option value="1m">Within 1 Month</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="log-actions" style="display: flex; gap: 8px;">
+                        <button class="btn btn-secondary" onclick="exportLogs()">
+                            <svg viewBox="0 0 24 24" width="16" height="16" style="margin-right: 4px;"><path fill="currentColor" d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M16,11V13H13V16H11V13H8V11H11V8H13V11H16Z"/></svg>
+                            Export CSV
+                        </button>
+                        <button class="btn btn-secondary" onclick="fetchLogs(true)" title="Refresh and jump to latest">
+                            <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H21V3L17.65,6.35Z"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="log-controls-row" style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+                    <div class="log-tabs">
+                        <button class="log-tab active" data-tab="all" onclick="switchLogTab('all')">All</button>
+                        <button class="log-tab" data-tab="traffic" onclick="switchLogTab('traffic')">Connections</button>
+                        <button class="log-tab" data-tab="auth" onclick="switchLogTab('auth')">Authentication</button>
+                        <button class="log-tab" data-tab="tls" onclick="switchLogTab('tls')">TLS Security</button>
+                        <button class="log-tab" data-tab="general" onclick="switchLogTab('general')">General</button>
+                        <label class="log-verbose-toggle" title="Include routine protocol lines (handshake steps, pushed options, keepalive notices)">
+                            <input type="checkbox" id="logVerboseToggle" onchange="fetchLogs(true)">
+                            Routine lines
+                        </label>
+                    </div>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <input type="text" id="logSearchInput" oninput="filterLogsConsole()" placeholder="Search logs..." style="padding: 6px 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-color); font-size: 0.8125rem; width: 180px;">
+                        <div class="log-severity-filters" style="display: flex; align-items: center; gap: 8px;">
+                            <span class="severity-label" style="font-size: 0.8125rem; color: var(--text-secondary);">Severity:</span>
+                            <button class="severity-pill active" data-severity="all" onclick="switchSeverityFilter('all')">All</button>
+                            <button class="severity-pill" data-severity="info" onclick="switchSeverityFilter('INFO')">Info</button>
+                            <button class="severity-pill" data-severity="warning" onclick="switchSeverityFilter('WARNING')">Warnings</button>
+                            <button class="severity-pill" data-severity="error" onclick="switchSeverityFilter('ERROR')">Errors</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="log-table-wrapper">
+                    <button type="button" class="log-paused-pill hidden" id="logPausedPill" onclick="jumpToLatestLogs()">
+                        Live updates paused while you scroll &middot; Back to latest
+                    </button>
+                    <div class="log-table-scroll" id="logTableScroll">
+                        <table class="log-table">
+                            <thead>
+                                <tr>
+                                    <th>Time (UTC)</th>
+                                    <th>Severity</th>
+                                    <th>Category</th>
+                                    <th>Event</th>
+                                    <th>User</th>
+                                    <th title="Common Name of the client certificate presented">Certificate CN</th>
+                                    <th title="Public address and port the client connected from">Source IP:Port</th>
+                                    <th title="Address assigned to the client inside the VPN">Virtual IP</th>
+                                    <th title="Client software and platform reported by the peer">Client</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logTableBody">
+                                <tr><td colspan="10" class="log-empty">Loading logs...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </section>
+    </main>
+
+    <div class="modal-overlay hidden" id="createModal">
+        <div class="modal glass">
+            <div class="modal-header">
+                <h2>Create Client Configuration</h2>
+                <button class="close-btn" onclick="closeModal('createModal')">&times;</button>
+            </div>
+            <form id="createClientForm">
+                <div class="modal-body">
+                    <div class="alert alert-error hidden" id="createError"></div>
+                    
+                    <div class="input-group">
+                        <label for="clientUsernameInput">Username (Email) *</label>
+                        <input type="email" id="clientUsernameInput" required maxlength="254" placeholder="e.g. jdoe@{{ email_domains[0] if email_domains else 'example.org' }}">
+                        {% if email_domains %}
+                        <span class="field-hint">Email address ending in {{ email_domains | join(', ') }}.</span>
+                        {% else %}
+                        <span class="field-hint">The user's email address.</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="clientNameInput">Device Common Name (CN) *</label>
+                        <input type="text" id="clientNameInput" required placeholder="e.g. john-laptop" pattern="^[a-zA-Z0-9_-]+$" title="Only alphanumeric characters, dashes, and underscores allowed.">
+                        <span class="field-hint">Unique identifier for this client certificate.</span>
+                    </div>
+                    
+                    <div class="input-grid-2">
+                        <div class="input-group">
+                            <label for="clientPasswordInput">Connection Password *</label>
+                            <div class="input-action-wrapper" style="display: flex; gap: 8px;">
+                                <input type="text" id="clientPasswordInput" required placeholder="Generate or type password..." style="flex: 1;">
+                                <button type="button" class="btn btn-secondary" onclick="generateRandomPassword()" style="padding: 0 16px;">Gen</button>
+                            </div>
+                            <span class="field-hint">VPN connection password.</span>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="clientLimitInput">Concurrent Connections Limit *</label>
+                            <select id="clientLimitInput" required>
+                                <option value="1" selected>1 Connection (Default)</option>
+                                <option value="2">2 Connections</option>
+                                <option value="3">3 Connections</option>
+                                <option value="4">4 Connections</option>
+                                <option value="0">Unlimited</option>
+                            </select>
+                            <span class="field-hint">Maximum simultaneous active devices.</span>
+                        </div>
+                    </div>
+
+                    <div class="modal-section-title">Certificate Authority (DN) Fields</div>
+                    <div class="input-grid-2">
+                        <div class="input-group">
+                            <label for="dnCountry">Country (C)</label>
+                            <input type="text" id="dnCountry" placeholder="Two-letter code">
+                        </div>
+                        <div class="input-group">
+                            <label for="dnProvince">State/Province (ST)</label>
+                            <input type="text" id="dnProvince" placeholder="State or province">
+                        </div>
+                    </div>
+
+                    <div class="input-grid-2">
+                        <div class="input-group">
+                            <label for="dnCity">City/Locality (L)</label>
+                            <input type="text" id="dnCity" placeholder="City">
+                        </div>
+                        <div class="input-group">
+                            <label for="dnOrg">Organization (O)</label>
+                            <input type="text" id="dnOrg" placeholder="Organization name">
+                        </div>
+                    </div>
+
+                    <div class="input-grid-2">
+                        <div class="input-group">
+                            <label for="dnOU">Org Unit (OU)</label>
+                            <input type="text" id="dnOU" placeholder="e.g. IT Department">
+                        </div>
+                        <div class="input-group">
+                            <label for="dnEmail">Contact Email</label>
+                            <input type="email" id="dnEmail" placeholder="e.g. admin@example.org">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('createModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="btnCreateClientSubmit">
+                        <span class="spinner hidden" id="createSpinner"></span>
+                        Create Client
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="createUserModal">
+        <div class="modal glass">
+            <div class="modal-header">
+                <h2>Add UI User</h2>
+                <button class="close-btn" onclick="closeModal('createUserModal')">&times;</button>
+            </div>
+            <form id="createUserForm">
+                <div class="modal-body">
+                    <div class="alert alert-error hidden" id="createUserError"></div>
+                    <div class="input-group">
+                        <label for="uiUsernameInput">Username *</label>
+                        <input type="text" id="uiUsernameInput" required placeholder="e.g. support_staff">
+                    </div>
+                    <div class="input-group">
+                        <label for="uiPasswordInput">Password *</label>
+                        <input type="password" id="uiPasswordInput" required placeholder="Enter password">
+                    </div>
+                    <div class="input-group">
+                        <label for="uiRoleInput">Role *</label>
+                        <select id="uiRoleInput" required>
+                            <option value="user" selected>User (View-Only & Download Config)</option>
+                            <option value="admin">Admin (Full Control)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('createUserModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="editUserModal">
+        <div class="modal glass">
+            <div class="modal-header">
+                <h2>Edit UI User</h2>
+                <button class="close-btn" onclick="closeModal('editUserModal')">&times;</button>
+            </div>
+            <form id="editUserForm">
+                <div class="modal-body">
+                    <div class="alert alert-error hidden" id="editUserError"></div>
+                    <div class="input-group">
+                        <label for="editUiUsernameInput">Username</label>
+                        <input type="text" id="editUiUsernameInput" disabled style="background: rgba(128,128,128,0.2);">
+                    </div>
+                    <div class="input-group">
+                        <label for="editUiPasswordInput">New Password (leave blank to keep current)</label>
+                        <input type="password" id="editUiPasswordInput" placeholder="Enter new password">
+                    </div>
+                    <div class="input-group">
+                        <label for="editUiRoleInput">Role *</label>
+                        <select id="editUiRoleInput" required>
+                            <option value="user">User (View-Only & Download Config)</option>
+                            <option value="admin">Admin (Full Control)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editUserModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="confirmModal">
+        <div class="modal glass modal-sm">
+            <div class="modal-header">
+                <h2 id="confirmTitle">Confirm Action</h2>
+                <button class="close-btn" onclick="closeModal('confirmModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMessage">Are you sure you want to proceed?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('confirmModal')">Cancel</button>
+                <button class="btn btn-danger" id="confirmActionBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

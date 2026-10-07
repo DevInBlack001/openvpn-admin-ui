@@ -1,0 +1,28 @@
+{
+    "bind_address": "127.0.0.1",
+    "port": 8080,
+    "brand_name": "OpenVPN",
+
+    "pki_dir": "/path/to/easy-rsa",
+    "data_dir": "/etc/openvpn/server",
+    "clients_dir": "/etc/openvpn/clients",
+    "crl_file": "/etc/openvpn/server/crl.pem",
+    "openvpn_status": "/etc/openvpn/server/openvpn-status.log",
+    "openvpn_log": "/var/log/openvpn/openvpn.log",
+    "openvpn_service": "openvpn-server@server",
+    "make_client_script": "/path/to/make-client.sh",
+    "file_owner": "openvpn",
+
+    "allowed_email_domains": ["example.edu"],
+    "ca_defaults": {
+        "country": "",
+        "province": "",
+        "city": "",
+        "org": "",
+        "ou": "",
+        "email": ""
+    },
+
+    "session_minutes": 15,
+    "session_cookie_secure": false
+}

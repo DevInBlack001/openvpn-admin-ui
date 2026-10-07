@@ -1,0 +1,20 @@
+# Project notes that stay on the machine
+STATUS.md
+MEMORY.md
+REPORT.md
+CLAUDE.md
+
+# Secrets and site-specific data
+secret.key
+ui-users.json
+config.json
+*.ovpn
+*.key
+*.pem
+
+# Local environment and leftovers
+venv/
+__pycache__/
+*.pyc
+*.bak
+*.save
