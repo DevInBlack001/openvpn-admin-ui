@@ -88,6 +88,16 @@ body.light-theme {
     --data-ip: #0f766e;
     --data-port: #6d28d9;
 
+    /* Re-declared so they resolve against the light values above. */
+    --sidebar-bg: var(--bg-surface);
+    --sidebar-text: var(--text-secondary);
+    --sidebar-muted: var(--text-tertiary);
+    --sidebar-hover: var(--bg-hover);
+    --sidebar-active-bg: var(--accent-soft);
+    --sidebar-active-text: var(--accent);
+    --sidebar-border: var(--border-color);
+    --sidebar-heading: var(--text-color);
+
     --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.06);
     --shadow-md: 0 10px 28px rgba(16, 24, 40, 0.12);
 }

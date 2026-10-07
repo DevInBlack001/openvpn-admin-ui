@@ -239,7 +239,10 @@ All notable changes to this project, oldest first within each date. Times are UT
 - Rounded cards and tables with header bands, softer buttons, and a pill-shaped
   status bar.
 - Client action buttons collapse to icons with tooltips on narrower windows.
-- Screenshots in the README are regenerated.
+- Screenshots in the README are regenerated in the light theme.
+
+**Fixed**
+- The sidebar stayed dark in the light theme when a site set no sidebar colours.
 
 ## Deployment status
 
