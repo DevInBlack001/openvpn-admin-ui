@@ -24,8 +24,9 @@ should behave, what to change, and what to ship.
 - Download a ready-to-import `.ovpn` profile for any valid client.
 - Revoke a certificate. The certificate revocation list is regenerated and loaded
   by OpenVPN.
-- Operations-console interface: sidebar navigation, a top bar with a UTC clock
-  and the VPN server's state, flat panels, and monospace values.
+- Operations-console interface: a sidebar with icons and an account card, a top
+  bar with a UTC clock and the VPN server's state, counter cards with usage
+  bars, avatars and session pills, and monospace values for data.
 - Dashboard with 24-hour counters for failed logins, TLS errors, port probes,
   and device-limit rejections, plus a panel of the most recent alerts.
 - Live view of every client: certificate status, expiry, session state, source

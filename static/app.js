@@ -96,6 +96,8 @@ function switchPage(pageId) {
         activeTab.classList.add('active');
         const title = document.getElementById('pageTitle');
         if (title) title.textContent = activeTab.dataset.title || '';
+        const subtitle = document.getElementById('pageSubtitle');
+        if (subtitle) subtitle.textContent = activeTab.dataset.subtitle || '';
     }
     toggleSidebar(false);
 
@@ -153,8 +155,16 @@ function fetchSystemStats() {
 
 function fetchHostStats() {
     const show = (id, value) => {
-        document.getElementById(id).textContent =
-            (value === null || value === undefined) ? '--%' : `${Math.round(value)}%`;
+        const missing = value === null || value === undefined;
+        document.getElementById(id).textContent = missing ? '--%' : `${Math.round(value)}%`;
+        // The bar under the figure fills with the same value and warns as it climbs.
+        const bar = document.getElementById(id.replace('Stat', 'Bar'));
+        if (bar) {
+            const percent = missing ? 0 : Math.max(0, Math.min(100, value));
+            bar.style.width = `${percent}%`;
+            bar.classList.toggle('is-warning', percent >= 70 && percent < 90);
+            bar.classList.toggle('is-danger', percent >= 90);
+        }
     };
     fetch('/api/system/stats')
         .then(res => res.json())
@@ -225,14 +235,27 @@ function setAlertStat(name, text, alarmClass) {
     const value = document.getElementById(`${name}Stat`);
     const card = document.getElementById(`${name}Card`);
     if (value) value.textContent = text;
-    if (card) card.classList.toggle(alarmClass, text !== '0');
+    if (card) {
+        const raised = text !== '0';
+        card.classList.toggle(alarmClass, raised);
+        card.classList.toggle('tone-clear', !raised);
+    }
 }
 
 function renderAlertPanel(rows) {
     const tbody = document.getElementById('alertTableBody');
     if (!tbody) return;
     if (rows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="log-empty">No warnings or errors in the last 24 hours.</td></tr>`;
+        tbody.innerHTML = `
+            <tr class="empty-row"><td colspan="5">
+                <div class="all-clear">
+                    <span class="all-clear-icon">${icon('check')}</span>
+                    <div>
+                        <strong>All clear</strong>
+                        <span>No warnings or errors in the last 24 hours.</span>
+                    </div>
+                </div>
+            </td></tr>`;
         return;
     }
     tbody.innerHTML = rows.map(log => `
@@ -327,9 +350,9 @@ function renderClients(clients) {
         let connectionStatus = '';
         if (client.connected) {
             const devCount = client.devices ? client.devices.length : 1;
-            connectionStatus = `<span class="status-dot status-dot-active"></span>Connected (${devCount})`;
+            connectionStatus = `<span class="session-pill is-online"><span class="status-dot status-dot-active"></span>Connected (${devCount})</span>`;
         } else {
-            connectionStatus = `<span class="status-dot status-dot-inactive"></span>Offline`;
+            connectionStatus = `<span class="session-pill"><span class="status-dot status-dot-inactive"></span>Offline</span>`;
         }
         
         let bandwidth = '-';
@@ -345,10 +368,10 @@ function renderClients(clients) {
                 actionButtons = `
                     <div class="actions-cell-wrapper">
                         <button class="btn btn-secondary btn-sm" data-name="${safeName}" onclick="downloadClient(this.dataset.name)" title="Download Configuration">
-                            Download
+                            ${icon('download')}<span class="btn-label">Download</span>
                         </button>
                         <button class="btn btn-danger btn-sm" data-name="${safeName}" onclick="confirmRevokeClient(this.dataset.name)" title="Revoke Certificate">
-                            Revoke
+                            ${icon('ban')}<span class="btn-label">Revoke</span>
                         </button>
                     </div>
                 `;
@@ -356,7 +379,7 @@ function renderClients(clients) {
                 actionButtons = `
                     <div class="actions-cell-wrapper">
                         <button class="btn btn-danger btn-sm" data-name="${safeName}" onclick="confirmDeleteClient(this.dataset.name)" title="Delete Profile">
-                            Delete
+                            ${icon('trash')}<span class="btn-label">Delete</span>
                         </button>
                     </div>
                 `;
@@ -366,7 +389,7 @@ function renderClients(clients) {
                 actionButtons = `
                     <div class="actions-cell-wrapper">
                         <button class="btn btn-secondary btn-sm" data-name="${safeName}" onclick="downloadClient(this.dataset.name)" title="Download Configuration">
-                            Download
+                            ${icon('download')}<span class="btn-label">Download</span>
                         </button>
                     </div>
                 `;
@@ -399,8 +422,13 @@ function renderClients(clients) {
         
         tr.innerHTML = `
             <td class="client-name-cell" title="${escapeHtml(client.username)}">
-                ${escapeHtml(client.username || '-')}
-                <div class="log-sub" title="Certificate CN">CN ${safeName}</div>
+                <div class="identity">
+                    ${avatar(client.username || client.name, client.connected)}
+                    <div class="identity-text">
+                        <span class="identity-name">${escapeHtml(client.username || '-')}</span>
+                        <span class="log-sub" title="Certificate CN">CN ${safeName}</span>
+                    </div>
+                </div>
             </td>
             <td title="Expires ${escapeHtml(client.expiry)} UTC">
                 ${statusBadge}
@@ -680,10 +708,10 @@ function renderUIUsers(users) {
             actionButtons = `
                 <div class="actions-cell-wrapper">
                     <button class="btn btn-secondary btn-sm" ${userAttrs} onclick="openEditUserModal(this.dataset.username, this.dataset.role)">
-                        Edit
+                        ${icon('edit')}Edit
                     </button>
                     <button class="btn btn-danger btn-sm" ${userAttrs} onclick="confirmDeleteUIUser(this.dataset.username)">
-                        Delete
+                        ${icon('trash')}Delete
                     </button>
                 </div>
             `;
@@ -691,16 +719,21 @@ function renderUIUsers(users) {
             actionButtons = `
                 <div class="actions-cell-wrapper">
                     <button class="btn btn-secondary btn-sm" ${userAttrs} onclick="openEditUserModal(this.dataset.username, this.dataset.role)">
-                        Edit Password
+                        ${icon('edit')}Edit Password
                     </button>
-                    <span class="text-muted" style="margin-left: 8px; font-size: 0.8125rem;">(Active Account)</span>
+                    <span class="panel-tag">Your account</span>
                 </div>
             `;
         }
         
         tr.innerHTML = `
-            <td><strong>${escapeHtml(user.username)}</strong></td>
-            <td><span class="badge ${user.role === 'admin' ? 'badge-danger' : 'badge-warning'}">${escapeHtml(user.role.toUpperCase())}</span></td>
+            <td>
+                <div class="identity">
+                    ${avatar(user.username, false)}
+                    <span class="identity-name">${escapeHtml(user.username)}</span>
+                </div>
+            </td>
+            <td><span class="badge ${user.role === 'admin' ? 'badge-accent' : 'badge-info'}">${escapeHtml(user.role.toUpperCase())}</span></td>
             <td class="actions-col">${actionButtons}</td>
         `;
         
@@ -802,6 +835,17 @@ function jumpToLatestLogs() {
     const scrollEl = document.getElementById('logTableScroll');
     if (scrollEl) scrollEl.scrollTop = 0;
     setLogsPaused(false);
+}
+
+// An icon from the SVG sprite defined at the top of the page.
+function icon(name) {
+    return `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+}
+
+// A round badge with the first letter of a name, marked when the session is live.
+function avatar(name, online) {
+    const letter = (String(name || '?').trim()[0] || '?').toUpperCase();
+    return `<span class="avatar avatar-sm${online ? ' is-online' : ''}">${escapeHtml(letter)}</span>`;
 }
 
 function escapeHtml(value) {

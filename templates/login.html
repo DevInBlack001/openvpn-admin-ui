@@ -12,10 +12,12 @@
 
     <main class="login-panel">
         <div class="login-brand">
-            <div class="logo-icon">{{ brand_name[0].upper() if brand_name else 'V' }}</div>
+            <div class="logo-icon">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
             <div>
                 <h1>{{ brand_name }}</h1>
-                <p>Admin Console</p>
+                <p>Security Console</p>
             </div>
         </div>
 

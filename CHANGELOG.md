@@ -223,6 +223,24 @@ All notable changes to this project, oldest first within each date. Times are UT
   console only.
 - Decorative gradients, glow effects, and translucent surfaces.
 
+### 12. Visual polish
+
+**Added**
+- Inline SVG icon set for navigation, counters, panel headers, and actions.
+- Counter cards with icon chips and tone colours, in rows of four. CPU and memory
+  carry usage bars that turn amber at 70 percent and red at 90.
+- Panel headers with an icon and a one-line description, and a page subtitle.
+- Sidebar account card with the log-out button, and sidebar colour variables a
+  theme can set, including a gradient background.
+- Lettered avatars with a marker for live sessions, session pills, an "All clear"
+  state for the alert panel, and a centred sign-in card with the shield mark.
+
+**Changed**
+- Rounded cards and tables with header bands, softer buttons, and a pill-shaped
+  status bar.
+- Client action buttons collapse to icons with tooltips on narrower windows.
+- Screenshots in the README are regenerated.
+
 ## Deployment status
 
 Every item above is running on the production server.

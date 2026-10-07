@@ -438,6 +438,8 @@ of the expiry), `statusBadge`, `connectionStatus`, `bandwidth`, `actionButtons`,
 | `fetchLogs(force = false)` | Loads rows for the current filters. With `force`, redraws and returns to the top. Without it (the timer), redraws only when the data changed and the reader is at the top. When the reader has scrolled down and new data arrived, shows the paused pill. |
 | `setLogsPaused(paused)` | Shows or hides the paused pill |
 | `jumpToLatestLogs()` | Redraws from `cachedLogs`, scrolls to the top, hides the pill |
+| `icon(name)` | Markup for an icon from the SVG sprite |
+| `avatar(name, online)` | A round badge with the first letter of a name, marked when the session is live |
 | `escapeHtml(value)` | Replaces `&`, `<`, `>`, `"`, and `'` with HTML entities. `null` and `undefined` become an empty string. |
 | `filterLogsBySearch(logs)` | Keeps rows whose raw line, event, user, certificate CN, virtual IP, client, or platform contains the search text |
 | `renderLogsTable(logs)` | Builds two table rows per event: the visible row, and a hidden row holding the original line |
@@ -502,7 +504,8 @@ Defined on `:root` for the dark theme and overridden under `body.light-theme`.
 | Variable | Use |
 |---|---|
 | `--bg-page`, `--bg-surface`, `--bg-surface-alt`, `--bg-hover`, `--bg-code` | Page, panel, raised, hover, and code backgrounds |
-| `--bg-sidebar` | Optional sidebar background. Falls back to `--bg-surface`. |
+| `--sidebar-bg`, `--sidebar-text`, `--sidebar-muted`, `--sidebar-heading`, `--sidebar-hover`, `--sidebar-active-bg`, `--sidebar-active-text`, `--sidebar-border` | Sidebar colours. Default to the surface and accent variables. |
+| `--radius-lg` | Corner radius of panels and cards |
 | `--border-color`, `--border-strong` | Dividers and control outlines |
 | `--accent`, `--accent-hover`, `--accent-soft`, `--text-on-accent` | Main brand colour and the text placed on it |
 | `--highlight`, `--highlight-text`, `--text-on-highlight` | Second brand colour for the logo mark, the top strip, and the role tag. Follows the accent unless a theme sets it. |
@@ -520,10 +523,12 @@ A deployment overrides any of these through the `theme` setting. See
 
 | Classes | Use |
 |---|---|
-| `.sidebar`, `.logo-area`, `.logo-icon`, `.logo-text`, `.nav-menu`, `.nav-section`, `.nav-tab`, `.nav-dot`, `.nav-count`, `.sidebar-footer` | Sidebar navigation |
+| `.sidebar`, `.logo-area`, `.logo-icon`, `.logo-words`, `.logo-text`, `.logo-sub`, `.nav-menu`, `.nav-section`, `.nav-tab`, `.nav-count`, `.sidebar-user`, `.sidebar-logout` | Sidebar navigation and account card |
+| `.icon`, `.icon-sprite` | Inline SVG icons drawn from the sprite at the top of `index.html` |
+| `.avatar`, `.avatar-sm`, `.identity`, `.session-pill`, `.all-clear` | Lettered avatars with a live marker, name blocks, session state, and the empty alert state |
 | `.main-panel`, `.top-bar`, `.top-bar-title`, `.system-status`, `.status-pill`, `.role-tag`, `.theme-toggle`, `.nav-toggle`, `.sidebar-backdrop`, `.content-area` | Top bar and page frame |
-| `.stats-grid`, `.stat-card`, `.stat-label`, `.stat-value`, `.stat-meta`, `.is-warning`, `.is-danger` | Dashboard counters and their alarm outlines |
-| `.main-card`, `.card-header`, `.header-left`, `.panel-tag`, `.table-container` | Panels and the scrolling table wrapper |
+| `.stats-grid`, `.stat-card`, `.stat-top`, `.stat-icon`, `.stat-label`, `.stat-value`, `.stat-meta`, `.meter`, `.meter-fill`, `.tone-accent`, `.tone-clear`, `.tone-neutral`, `.is-warning`, `.is-danger` | Dashboard counters, their icon chips, usage bars, and tone colours |
+| `.main-card`, `.card-header`, `.header-left`, `.panel-icon`, `.panel-sub`, `.panel-tag`, `.table-container` | Panels and the scrolling table wrapper |
 | `.client-table`, `.client-name-cell`, `.ip-cell`, `.actions-col`, `.actions-cell-wrapper`, `.password-cell` | Client and account tables |
 | `.badge`, `.badge-success`, `.badge-danger`, `.badge-warning`, `.badge-info`, `.status-dot` | Status markers |
 | `.btn`, `.btn-primary`, `.btn-danger`, `.btn-sm` | Buttons |

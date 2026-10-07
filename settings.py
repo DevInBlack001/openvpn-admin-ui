@@ -29,7 +29,7 @@ CA_FIELDS = ("country", "province", "city", "org", "ou", "email")
 
 # A theme override may set CSS custom properties to colours and simple values.
 THEME_NAME_RE = re.compile(r"^--[a-z0-9-]{1,40}$")
-THEME_VALUE_RE = re.compile(r"^[#a-zA-Z0-9(),.% -]{1,60}$")
+THEME_VALUE_RE = re.compile(r"^[#a-zA-Z0-9(),.% -]{1,80}$")
 
 
 class SettingsError(Exception):

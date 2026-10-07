@@ -13,8 +13,8 @@ from that address until the window passes.
 
 | Area | Contents |
 |---|---|
-| Sidebar | **Dashboard**, **Event Log**, and for admins **Console Users**. The Event Log entry carries a red count of errors in the last 24 hours. |
-| Top bar | Page title, the current UTC time, the VPN server's state, the signed-in account and role, the theme switch, and **Log Out** |
+| Sidebar | **Dashboard**, **Event Log**, and for admins **Console Users**. The Event Log entry carries a red count of errors in the last 24 hours. At the foot, a card shows the signed-in account and role with the log-out button. |
+| Top bar | Page title and subtitle, the VPN server's state, the current UTC time, and the theme switch |
 | Content | The selected view |
 
 The VPN pill reads **VPN Online** while OpenVPN keeps refreshing its status file
@@ -81,7 +81,7 @@ hours.
 | Password | For admins: masked by default, click to reveal, click again to hide. For `user` accounts: shown as "Hidden". |
 | Source / Virtual IP | Public address and port of each connected device, with its VPN address beneath it |
 | Traffic | Bytes received from and sent to the client in the current session |
-| Actions | **Download**, **Revoke**, or **Delete** |
+| Actions | **Download**, **Revoke**, or **Delete**. Below about 1640 pixels of window width the buttons show icons only, with tooltips. |
 
 The search box filters by email, common name, real address, or virtual IP.
 

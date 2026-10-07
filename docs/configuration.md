@@ -115,6 +115,7 @@ object per mode. Each object maps a CSS variable to a value.
 | `--border-color`, `--border-strong` | Dividers and control outlines |
 | `--accent`, `--accent-hover`, `--accent-soft` | Active navigation, primary buttons, selected filters, focus rings |
 | `--text-on-accent` | Text on an accent background |
+| `--sidebar-bg`, `--sidebar-text`, `--sidebar-muted`, `--sidebar-heading`, `--sidebar-hover`, `--sidebar-active-bg`, `--sidebar-active-text`, `--sidebar-border` | Sidebar colours. They follow the surface and accent colours unless set, so a site can brand the sidebar alone. `--sidebar-bg` may be a gradient, for example `linear-gradient(180deg, #0f3d26, #0a1f15)`. |
 | `--highlight` | Second brand colour: the logo mark and the strip along the top edge |
 | `--highlight-text` | The highlight colour where it is used as text, for example the role tag. Set a darker shade for the light theme. |
 | `--text-on-highlight` | Text on a highlight background |
@@ -124,7 +125,7 @@ object per mode. Each object maps a CSS variable to a value.
 
 Variables left out keep their built-in values. A name must start with `--` and
 use lower-case letters, digits, and dashes. A value may hold letters, digits,
-`#`, parentheses, commas, dots, percent signs, spaces, and dashes, up to 60
+`#`, parentheses, commas, dots, percent signs, spaces, and dashes, up to 80
 characters. Entries that fail either check are ignored.
 
 Restart the service after changing the theme.
